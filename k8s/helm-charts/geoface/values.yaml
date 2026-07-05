@@ -1,0 +1,76 @@
+# ============================================================
+# Values terpusat untuk semua app GeoFace.
+# Deploy: helm install geoface ./k8s/helm-charts/geoface -n geoface
+# ============================================================
+
+# Default image untuk semua service (bisa dioverride per-service di bawah).
+# Karena cluster = Docker Desktop k8s, image lokal langsung kepakai -> IfNotPresent.
+image:
+  pullPolicy: IfNotPresent
+  tag: latest
+
+# ---------------- API Gateway (pintu masuk) ----------------
+apiGateway:
+  enabled: true
+  replicas: 1
+  image:
+    repository: geoface-attendence-system-api-gateway
+    tag: "" # kosong = ikut .Values.image.tag
+  port: 3000
+  env:
+    CORE_SERVICE_URL: "http://core-service:3001"
+    AI_SERVICE_URL: "http://ai-service:5000"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      memory: "256Mi"
+
+# ---------------- Core Service (bisnis logic) ----------------
+coreService:
+  enabled: true
+  replicas: 1
+  image:
+    repository: geoface-attendence-system-core-service
+    tag: ""
+  port: 3001
+  env:
+    AI_SERVICE_URL: "http://ai-service:5000"
+  # Koneksi ke Postgres PostGIS (bitnami release: geoface-db)
+  database:
+    host: "geoface-db-postgresql"
+    port: "5432"
+    name: "geoface_db"
+    user: "postgres"
+    password: "" # WAJIB diisi via --set atau secret saat install
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      memory: "256Mi"
+
+# ---------------- AI Service (FastAPI + DeepFace) ----------------
+aiService:
+  enabled: true
+  replicas: 1
+  image:
+    repository: geoface-attendence-system-ai-service
+    tag: ""
+  port: 5000
+  env:
+    MINIO_ENDPOINT: "geoface-minio:9000"
+  # DeepFace + TensorFlow butuh memori lebih besar
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      memory: "2Gi"
+
+# ---------------- Ingress (semua lewat api-gateway) ----------------
+ingress:
+  enabled: true
+  className: "nginx"
+  host: "geoface.local"

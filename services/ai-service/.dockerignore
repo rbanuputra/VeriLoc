@@ -1,0 +1,13 @@
+venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.env
+.env.*
+*.log
+Dockerfile
+dockerfile
+.dockerignore
+.deepface

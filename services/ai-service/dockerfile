@@ -1,0 +1,26 @@
+# === AI Service (FastAPI + DeepFace) ===
+# Gunakan python slim agar image tidak terlalu besar
+FROM python:3.10-slim
+
+# Cache model DeepFace disimpan di sini (bukan di /root, karena kita pakai non-root user)
+ENV DEEPFACE_HOME=/app/.deepface
+ENV PYTHONUNBUFFERED=1
+
+# Install dependensi sistem yang dibutuhkan OpenCV.
+# Catatan: di Debian 13 (trixie) paket lama 'libgl1-mesa-glx' sudah diganti 'libgl1'.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install dependencies dulu (manfaatkan layer cache)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY . .
+
+EXPOSE 5000
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5000"]

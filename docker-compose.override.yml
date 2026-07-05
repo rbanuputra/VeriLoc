@@ -1,0 +1,45 @@
+# ============================================================
+# Override DEV — otomatis kegabung sama docker-compose.yml.
+# Dipakai buat hot-reload lewat: docker compose watch
+#
+# Catatan:
+#  - `docker compose up` / `watch`  -> mode DEV (pakai file ini otomatis)
+#  - Mau tes image PRODUKSI         -> docker compose -f docker-compose.yml up --build
+#    (pakai -f biar override ini DIABAIKAN)
+# ============================================================
+
+services:
+  api-gateway:
+    build:
+      target: dev # pakai stage 'dev' (nest start --watch), bukan production
+    develop:
+      watch:
+        # File source berubah -> di-sync ke container -> nest auto-reload
+        - action: sync
+          path: ./services/api-gateway/src
+          target: /app/src
+        # Dependency berubah -> rebuild image (reload biasa nggak cukup)
+        - action: rebuild
+          path: ./services/api-gateway/package.json
+
+  core-service:
+    build:
+      target: dev
+    develop:
+      watch:
+        - action: sync
+          path: ./services/core-service/src
+          target: /app/src
+        - action: rebuild
+          path: ./services/core-service/package.json
+
+  ai-service:
+    # uvicorn[standard] sudah termasuk watchfiles -> --reload jalan
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+    develop:
+      watch:
+        - action: sync
+          path: ./services/ai-service/src
+          target: /app/src
+        - action: rebuild
+          path: ./services/ai-service/requirements.txt

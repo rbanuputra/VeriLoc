@@ -1,0 +1,44 @@
+# === Core Service (NestJS) ===
+# Build context = folder ini sendiri (services/core-service).
+
+# --- Stage 1: Builder ---
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Manfaatkan layer cache: install dulu berdasarkan lockfile
+COPY package*.json ./
+RUN npm ci
+
+# Copy source & build (nest build -> /app/dist)
+COPY . .
+RUN npm run build
+
+# --- Stage: Dev (hot-reload, dipakai `docker compose watch`) ---
+# Punya semua deps (termasuk devDependencies) + source, jalan pakai nest --watch.
+FROM node:20-alpine AS dev
+ENV PORT=3001
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3001
+CMD ["npm", "run", "start:dev"]
+
+# --- Stage 2: Production Runtime (stage TERAKHIR = default build) ---
+FROM node:20-alpine AS production
+ENV NODE_ENV=production
+ENV PORT=3001
+WORKDIR /app
+
+# Install HANYA production dependencies
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy hasil build dari stage builder
+COPY --from=builder /app/dist ./dist
+
+# Best practice: jangan jalan sebagai root
+USER node
+
+EXPOSE 3001
+CMD ["node", "dist/main.js"]

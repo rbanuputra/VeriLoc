@@ -1,0 +1,21 @@
+GeoFace berhasil di-deploy ke namespace: {{ .Release.Namespace }}
+
+Cek status:
+  kubectl get pods,svc,ingress -n {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+
+Akses lewat ingress (tambahkan ke /etc/hosts dulu):
+  127.0.0.1  {{ .Values.ingress.host }}
+Lalu buka: http://{{ .Values.ingress.host }}/
+{{- end }}
+
+Akses cepat tanpa ingress (port-forward):
+  kubectl port-forward -n {{ .Release.Namespace }} svc/api-gateway {{ .Values.apiGateway.port }}:{{ .Values.apiGateway.port }}
+  kubectl port-forward -n {{ .Release.Namespace }} svc/ai-service {{ .Values.aiService.port }}:{{ .Values.aiService.port }}
+
+{{- if not .Values.coreService.database.password }}
+
+PERINGATAN: password database core-service masih kosong.
+Install ulang dengan: --set coreService.database.password=<password_postgres>
+{{- end }}

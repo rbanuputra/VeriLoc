@@ -1,0 +1,60 @@
+{{- if .Values.coreService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-service
+  labels:
+    {{- include "geoface.labels" (dict "name" "core-service" "root" $) | nindent 4 }}
+spec:
+  replicas: {{ .Values.coreService.replicas }}
+  selector:
+    matchLabels:
+      {{- include "geoface.selector" (dict "name" "core-service") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "geoface.selector" (dict "name" "core-service") | nindent 8 }}
+    spec:
+      containers:
+        - name: core-service
+          image: "{{ .Values.coreService.image.repository }}:{{ include "geoface.imageTag" (dict "svc" .Values.coreService "root" $) }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.coreService.port }}
+          env:
+            - name: PORT
+              value: "{{ .Values.coreService.port }}"
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.coreService.database.user }}:{{ .Values.coreService.database.password }}@{{ .Values.coreService.database.host }}:{{ .Values.coreService.database.port }}/{{ .Values.coreService.database.name }}"
+            {{- range $k, $v := .Values.coreService.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.coreService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.coreService.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.coreService.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-service
+  labels:
+    {{- include "geoface.labels" (dict "name" "core-service" "root" $) | nindent 4 }}
+spec:
+  selector:
+    {{- include "geoface.selector" (dict "name" "core-service") | nindent 4 }}
+  ports:
+    - port: {{ .Values.coreService.port }}
+      targetPort: {{ .Values.coreService.port }}
+{{- end }}

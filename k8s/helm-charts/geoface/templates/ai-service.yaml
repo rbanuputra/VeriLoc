@@ -1,0 +1,56 @@
+{{- if .Values.aiService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  labels:
+    {{- include "geoface.labels" (dict "name" "ai-service" "root" $) | nindent 4 }}
+spec:
+  replicas: {{ .Values.aiService.replicas }}
+  selector:
+    matchLabels:
+      {{- include "geoface.selector" (dict "name" "ai-service") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "geoface.selector" (dict "name" "ai-service") | nindent 8 }}
+    spec:
+      containers:
+        - name: ai-service
+          image: "{{ .Values.aiService.image.repository }}:{{ include "geoface.imageTag" (dict "svc" .Values.aiService "root" $) }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.aiService.port }}
+          env:
+            {{- range $k, $v := .Values.aiService.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.aiService.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.aiService.port }}
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.aiService.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  labels:
+    {{- include "geoface.labels" (dict "name" "ai-service" "root" $) | nindent 4 }}
+spec:
+  selector:
+    {{- include "geoface.selector" (dict "name" "ai-service") | nindent 4 }}
+  ports:
+    - port: {{ .Values.aiService.port }}
+      targetPort: {{ .Values.aiService.port }}
+{{- end }}

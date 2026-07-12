@@ -1,9 +1,0 @@
-# .dockerignore
-node_modules
-dist
-.git
-.env
-README.md
-*.log
-.dockerignore
-Dockerfile

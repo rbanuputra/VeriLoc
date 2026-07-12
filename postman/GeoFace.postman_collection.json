@@ -1,0 +1,259 @@
+{
+  "info": {
+    "name": "GeoFace — Core Service",
+    "description": "Koleksi testing untuk core-service (auth, role, user).\n\nAlur pemakaian:\n1. Register / Login  -> access_token otomatis kesimpen ke environment.\n2. Create Role       -> role_id otomatis kesimpen.\n3. Create User       -> user_id otomatis kesimpen.\n4. Endpoint lain otomatis pakai token + id yang udah kesimpen.\n\nSemua request (kecuali login & register) otomatis kirim header Authorization: Bearer {{access_token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3001" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Admin Utama\",\n  \"email\": \"admin@geoface.com\",\n  \"password\": \"Password123!\",\n  \"role_id\": \"{{role_id}}\"\n}"
+            },
+            "description": "Daftar user baru + langsung dapet token. role_id diambil dari environment (isi dulu lewat Create Role, atau ganti manual)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const token = res.access_token || (res.data && res.data.access_token);",
+                  "if (token) {",
+                  "  pm.environment.set('access_token', token);",
+                  "  console.log('access_token tersimpan');",
+                  "}",
+                  "const user = res.user || (res.data && res.data.user);",
+                  "if (user && user.id) pm.environment.set('user_id', user.id);",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@geoface.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Login -> access_token otomatis kesimpen ke environment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const token = res.access_token || (res.data && res.data.access_token);",
+                  "if (token) {",
+                  "  pm.environment.set('access_token', token);",
+                  "  console.log('access_token tersimpan');",
+                  "}",
+                  "pm.test('dapat token', () => pm.expect(token).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Role",
+      "item": [
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/role",
+              "host": ["{{base_url}}"],
+              "path": ["role"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin\"\n}"
+            },
+            "description": "Bikin role -> role_id otomatis kesimpen ke environment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const role = res.data || res;",
+                  "if (role && role.id) {",
+                  "  pm.environment.set('role_id', role.id);",
+                  "  console.log('role_id tersimpan: ' + role.id);",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/role", "host": ["{{base_url}}"], "path": ["role"] }
+          }
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/role/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["role", "{{role_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/role/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["role", "{{role_id}}"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Administrator\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/role/{{role_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["role", "{{role_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/user", "host": ["{{base_url}}"], "path": ["user"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Budi Staff\",\n  \"email\": \"budi@geoface.com\",\n  \"password\": \"Password123!\",\n  \"role_id\": \"{{role_id}}\"\n}"
+            },
+            "description": "Butuh token Admin/HRD. user_id otomatis kesimpen."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const user = res.data || res;",
+                  "if (user && user.id) {",
+                  "  pm.environment.set('user_id', user.id);",
+                  "  console.log('user_id tersimpan: ' + user.id);",
+                  "}",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/user", "host": ["{{base_url}}"], "path": ["user"] }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user", "{{user_id}}"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"fullname\": \"Budi Staff Updated\"\n}" }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user", "{{user_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -51,6 +51,13 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+    healthcheck:
+      # python selalu ada di image (slim tanpa curl), jadi cek /health pakai urllib
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     depends_on:
       minio:
         condition: service_started
@@ -66,10 +73,21 @@ services:
       - PORT=3001
       - DATABASE_URL=postgresql://${POSTGRES_USER:-geoface}:${POSTGRES_PASSWORD:-geoface123}@postgres:5432/geoface_db
       - AI_SERVICE_URL=http://ai-service:5000
+      # Auth
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-3600s}
+      # MinIO (buat face enrollment)
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BUCKET=biometric
     depends_on:
       postgres:
         condition: service_healthy
       ai-service:
+        condition: service_healthy
+      minio:
         condition: service_started
 
   api-gateway:

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Organization } from '../../organization/entities/organization.entity';
 import { Role } from '../../role/entities/role.entity';
 import { User } from '../../user/entities/user.entity';
 import { SeederService } from './seeder.service';
@@ -19,7 +20,7 @@ import { SeederService } from './seeder.service';
         synchronize: true, // DEV: pastikan tabel ada sebelum seeding
       }),
     }),
-    TypeOrmModule.forFeature([Role, User]),
+    TypeOrmModule.forFeature([Role, User, Organization]),
   ],
   providers: [SeederService],
 })

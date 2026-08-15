@@ -1,114 +1,102 @@
 {
   "info": {
-    "name": "GeoFace — Core Service",
-    "description": "Koleksi testing untuk core-service (auth, role, user).\n\nAlur pemakaian:\n1. Register / Login  -> access_token otomatis kesimpen ke environment.\n2. Create Role       -> role_id otomatis kesimpen.\n3. Create User       -> user_id otomatis kesimpen.\n4. Endpoint lain otomatis pakai token + id yang udah kesimpen.\n\nSemua request (kecuali login & register) otomatis kirim header Authorization: Bearer {{access_token}}.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "GeoFace — Core Service (SaaS Multi-Tenant)",
+    "description": "Koleksi testing core-service GeoFace (multi-tenant SaaS).\n\nAlur pemakaian:\n1. Register Organization -> bikin tenant + Admin pertama, access_token & organization_id otomatis kesimpen.\n   (Atau Login pakai SuperAdmin platform hasil seeder: admin@geoface.com.)\n2. Create Office        -> office_id otomatis kesimpen (titik geofence tenant).\n3. Create User          -> tambah Staff/HRD di tenant (butuh role_id; lihat Get Roles).\n4. Enroll Face          -> daftarkan wajah user login.\n5. Attendance check-in  -> foto + lat/lng, divalidasi wajah + radius kantor.\n\nSemua data terisolasi per organization_id (dibawa di dalam JWT).\nSemua request (kecuali login & register-organization) otomatis kirim Bearer {{access_token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "geoface-core-saas-0001"
   },
   "auth": {
     "type": "bearer",
     "bearer": [
-      { "key": "token", "value": "{{access_token}}", "type": "string" }
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
     ]
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3001" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001"
+    }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "Health",
+      "description": "Cek service hidup (tanpa auth).",
       "item": [
         {
-          "name": "Register",
+          "name": "Health Check",
           "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "register"]
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fullname\": \"Admin Utama\",\n  \"email\": \"admin@geoface.com\",\n  \"password\": \"Password123!\",\n  \"role_id\": \"{{role_id}}\"\n}"
-            },
-            "description": "Daftar user baru + langsung dapet token. role_id diambil dari environment (isi dulu lewat Create Role, atau ganti manual)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "const token = res.access_token || (res.data && res.data.access_token);",
-                  "if (token) {",
-                  "  pm.environment.set('access_token', token);",
-                  "  console.log('access_token tersimpan');",
-                  "}",
-                  "const user = res.user || (res.data && res.data.user);",
-                  "if (user && user.id) pm.environment.set('user_id', user.id);",
-                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
-                ]
-              }
+            "auth": {
+              "type": "noauth"
             }
-          ]
+          },
+          "response": []
         },
         {
-          "name": "Login",
+          "name": "Root",
           "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@geoface.com\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "description": "Login -> access_token otomatis kesimpen ke environment."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "const token = res.access_token || (res.data && res.data.access_token);",
-                  "if (token) {",
-                  "  pm.environment.set('access_token', token);",
-                  "  console.log('access_token tersimpan');",
-                  "}",
-                  "pm.test('dapat token', () => pm.expect(token).to.be.a('string'));"
-                ]
-              }
+            "auth": {
+              "type": "noauth"
             }
-          ]
+          },
+          "response": []
         }
       ]
     },
     {
-      "name": "Role",
+      "name": "Auth",
       "item": [
         {
-          "name": "Create Role",
+          "name": "Register Organization (signup tenant)",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/role",
-              "host": ["{{base_url}}"],
-              "path": ["role"]
+              "raw": "{{base_url}}/auth/register-organization",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register-organization"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Admin\"\n}"
+              "raw": "{\n  \"org_name\": \"Acme Corp\",\n  \"org_slug\": \"acme-corp\",\n  \"admin_fullname\": \"Admin Acme\",\n  \"admin_email\": \"admin@acme.com\",\n  \"admin_password\": \"Password123!\"\n}"
             },
-            "description": "Bikin role -> role_id otomatis kesimpen ke environment."
+            "description": "Self-service signup: bikin Organization + user Admin pertamanya sekaligus. access_token & organization_id otomatis kesimpen."
           },
           "event": [
             {
@@ -117,24 +105,406 @@
                 "type": "text/javascript",
                 "exec": [
                   "const res = pm.response.json();",
-                  "const role = res.data || res;",
-                  "if (role && role.id) {",
-                  "  pm.environment.set('role_id', role.id);",
-                  "  console.log('role_id tersimpan: ' + role.id);",
-                  "}",
+                  "if(res.refresh_token)pm.environment.set('refresh_token',res.refresh_token);",
+                  "if (res.access_token) pm.environment.set('access_token', res.access_token);",
+                  "if (res.organization && res.organization.id) pm.environment.set('organization_id', res.organization.id);",
+                  "if (res.user && res.user.id) pm.environment.set('user_id', res.user.id);",
                   "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
-          ]
+          ],
+          "response": []
         },
+        {
+          "name": "Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@acme.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Login -> access_token (berisi organization_id) otomatis kesimpen. Untuk SuperAdmin platform pakai admin@geoface.com (hasil seeder)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if(res.refresh_token)pm.environment.set('refresh_token',res.refresh_token);",
+                  "if (res.access_token) pm.environment.set('access_token', res.access_token);",
+                  "pm.test('dapat token', () => pm.expect(res.access_token).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "description": "Tukar refresh token → access+refresh baru (rotasi)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res=pm.response.json();if(res.access_token)pm.environment.set('access_token',res.access_token);if(res.refresh_token)pm.environment.set('refresh_token',res.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "description": "Cabut refresh token."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@acme.com\"\n}"
+            },
+            "description": "Minta token reset. Token dicetak di LOG core-service (dev)."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_DARI_LOG\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Set password baru pakai token dari log."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"Tmp!xxxx\",\n  \"new_password\": \"Password123!\"\n}"
+            },
+            "description": "Ganti password sendiri (karyawan baru wajib ganti password sementara)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organization (SuperAdmin)",
+      "description": "Manajemen tenant tingkat platform. Butuh login sebagai SuperAdmin (admin@geoface.com).",
+      "item": [
+        {
+          "name": "Get All Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Organization by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organization_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organization_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Super Admins (SuperAdmin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizations/platform/super-admins",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "organizations",
+                "platform",
+                "super-admins"
+              ]
+            },
+            "description": "Daftar akun SuperAdmin platform (tim developer)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Super Admin (dev team)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/platform/super-admins",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "organizations",
+                "platform",
+                "super-admins"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Dev Team\",\n  \"email\": \"dev@geoface.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Bikin akun SuperAdmin baru buat anggota tim developer. Butuh login sebagai SuperAdmin."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Role (SuperAdmin write / Admin read)",
+      "item": [
         {
           "name": "Get All Roles",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/role", "host": ["{{base_url}}"], "path": ["role"] }
-          }
+            "url": {
+              "raw": "{{base_url}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "role"
+              ]
+            },
+            "description": "Lihat role global (SuperAdmin/Admin/HRD/Staff). Simpan role_id yang mau dipakai buat Create User."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const list = res.data || res;",
+                  "if (Array.isArray(list)) {",
+                  "  const staff = list.find(r => r.name === 'Staff') || list[0];",
+                  "  if (staff && staff.id) { pm.environment.set('role_id', staff.id); console.log('role_id (Staff) tersimpan: ' + staff.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Role (SuperAdmin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager\"\n}"
+            }
+          },
+          "response": []
         },
         {
           "name": "Get Role by ID",
@@ -143,52 +513,92 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/role/{{role_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["role", "{{role_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "role",
+                "{{role_id}}"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
-          "name": "Update Role",
+          "name": "Update Role (SuperAdmin)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/role/{{role_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["role", "{{role_id}}"]
-            },
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Administrator\"\n}" }
-          }
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "role",
+                "{{role_id}}"
+              ]
+            }
+          },
+          "response": []
         },
         {
-          "name": "Delete Role",
+          "name": "Delete Role (SuperAdmin)",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
               "raw": "{{base_url}}/role/{{role_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["role", "{{role_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "role",
+                "{{role_id}}"
+              ]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
     {
       "name": "User",
+      "description": "User di dalam tenant. organization_id diambil dari token admin (bukan dari body).",
       "item": [
         {
           "name": "Create User",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/user", "host": ["{{base_url}}"], "path": ["user"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullname\": \"Budi Staff\",\n  \"email\": \"budi@geoface.com\",\n  \"password\": \"Password123!\",\n  \"role_id\": \"{{role_id}}\"\n}"
+              "raw": "{\n  \"fullname\": \"Budi Staff\",\n  \"email\": \"budi@acme.com\",\n  \"password\": \"Password123!\",\n  \"role_id\": \"{{role_id}}\"\n}"
             },
-            "description": "Butuh token Admin/HRD. user_id otomatis kesimpen."
+            "description": "Butuh token Admin/HRD. user_id otomatis kesimpen. User otomatis masuk tenant admin."
           },
           "event": [
             {
@@ -198,23 +608,30 @@
                 "exec": [
                   "const res = pm.response.json();",
                   "const user = res.data || res;",
-                  "if (user && user.id) {",
-                  "  pm.environment.set('user_id', user.id);",
-                  "  console.log('user_id tersimpan: ' + user.id);",
-                  "}",
+                  "if (user && user.id) { pm.environment.set('user_id', user.id); console.log('user_id tersimpan: ' + user.id); }",
                   "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
-          ]
+          ],
+          "response": []
         },
         {
           "name": "Get All Users",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/user", "host": ["{{base_url}}"], "path": ["user"] }
-          }
+            "url": {
+              "raw": "{{base_url}}/user",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Get User by ID",
@@ -223,23 +640,43 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/user/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["user", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "{{user_id}}"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Update User",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/user/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["user", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "{{user_id}}"
+              ]
             },
-            "body": { "mode": "raw", "raw": "{\n  \"fullname\": \"Budi Staff Updated\"\n}" }
-          }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Budi Staff Updated\"\n}"
+            }
+          },
+          "response": []
         },
         {
           "name": "Delete User",
@@ -248,10 +685,904 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/user/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["user", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "{{user_id}}"
+              ]
             }
-          }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Onboarding (Upload Kontrak)",
+      "description": "Flow: upload kontrak (PDF/gambar) -> OCR+parse draft -> HRD review -> confirm -> buat akun+kontrak. Admin/HRD.",
+      "item": [
+        {
+          "name": "Upload Contract (scan)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/onboarding/contracts/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboarding",
+                "contracts",
+                "upload"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": null
+                },
+                {
+                  "key": "fullname",
+                  "value": "Siti Karyawan",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "siti@acme.com",
+                  "type": "text"
+                },
+                {
+                  "key": "role_id",
+                  "value": "{{role_id}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Upload file kontrak + info dasar karyawan. Balikin draft hasil scan (extracted_data). document_id auto-save."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r=pm.response.json();const d=r.data||r;if(d&&d.id)pm.environment.set('document_id',d.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/onboarding/contracts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboarding",
+                "contracts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Review Draft",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/onboarding/contracts/{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboarding",
+                "contracts",
+                "{{document_id}}"
+              ]
+            },
+            "description": "Lihat draft hasil scan (extracted_data) sebelum konfirmasi."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm -> Create Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/onboarding/contracts/{{document_id}}/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "onboarding",
+                "contracts",
+                "{{document_id}}",
+                "confirm"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Siti Karyawan\",\n  \"email\": \"siti@acme.com\",\n  \"role_id\": \"{{role_id}}\",\n  \"base_salary\": 8500000,\n  \"start_date\": \"2026-08-01\",\n  \"ptkp_status\": \"TK/0\",\n  \"overtime_rate_per_hour\": 50000,\n  \"standard_working_days\": 22,\n  \"terms\": \"Jam kerja 09:00-17:00\",\n  \"components\": [\n    {\n      \"kind\": \"EARNING\",\n      \"name\": \"Tunjangan Transport\",\n      \"calc\": \"FIXED\",\n      \"value\": 500000,\n      \"taxable\": true\n    },\n    {\n      \"kind\": \"DEDUCTION\",\n      \"name\": \"Potongan Koperasi\",\n      \"calc\": \"FIXED\",\n      \"value\": 100000\n    }\n  ]\n}"
+            },
+            "description": "Konfirmasi data final (hasil koreksi HRD) -> buat akun karyawan (temp_password di response) + kontrak."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Biometric",
+      "description": "Enrollment & pencocokan wajah (scoped tenant). enroll/verify pakai multipart form-data: field 'file' (jpg/png, maks 5MB).",
+      "item": [
+        {
+          "name": "Enroll Face (me)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/biometric/enroll",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "biometric",
+                "enroll"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": null
+                }
+              ]
+            },
+            "description": "Daftarkan wajah user login. Pilih file gambar di field 'file'. enrollment_id otomatis kesimpen."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const data = res.data || res;",
+                  "if (data && data.id) { pm.environment.set('enrollment_id', data.id); console.log('enrollment_id tersimpan: ' + data.id); }",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify Face (me)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/biometric/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "biometric",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": null
+                }
+              ]
+            },
+            "description": "Uji pencocokan foto terhadap enrollment sendiri. Response: { matched, distance, threshold, enrollmentId }."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/biometric/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "biometric",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Enrollment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/biometric/{{enrollment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "biometric",
+                "{{enrollment_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Office",
+      "description": "Kantor/cabang tenant (titik geofence). Create/Update/Delete butuh Admin/HRD. Semua scoped ke tenant.",
+      "item": [
+        {
+          "name": "Create Office",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/office",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "office"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kantor Pusat\",\n  \"address\": \"Jakarta\",\n  \"latitude\": -6.200000,\n  \"longitude\": 106.816666,\n  \"radius_meters\": 150\n}"
+            },
+            "description": "Bikin kantor. office_id otomatis kesimpen."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const o = res.data || res;",
+                  "if (o && o.id) { pm.environment.set('office_id', o.id); console.log('office_id tersimpan: ' + o.id); }",
+                  "pm.test('status 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get All Offices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/office",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "office"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Office by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/office/{{office_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "office",
+                "{{office_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Office",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/office/{{office_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "office",
+                "{{office_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"radius_meters\": 200\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Office",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/office/{{office_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "office",
+                "{{office_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "description": "Absensi (scoped tenant). check-in/out pakai multipart form-data: 'file' (selfie) + 'latitude' + 'longitude'. Wajib sudah enroll wajah & dalam radius kantor tenant.",
+      "item": [
+        {
+          "name": "Check In",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attendance/check-in",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "check-in"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": null
+                },
+                {
+                  "key": "latitude",
+                  "value": "-6.200000",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "106.816666",
+                  "type": "text"
+                },
+                {
+                  "key": "is_mock_location",
+                  "value": "false",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Absen masuk. Foto di field 'file', isi latitude & longitude. Harus dalam radius kantor & wajah cocok."
+          },
+          "response": []
+        },
+        {
+          "name": "Check Out",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attendance/check-out",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "check-out"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": null
+                },
+                {
+                  "key": "latitude",
+                  "value": "-6.200000",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "106.816666",
+                  "type": "text"
+                },
+                {
+                  "key": "is_mock_location",
+                  "value": "false",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Absen pulang. Sama seperti check-in."
+          },
+          "response": []
+        },
+        {
+          "name": "My Attendance History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attendance/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All Attendance (Admin/HRD)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attendance",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance"
+              ]
+            },
+            "description": "Semua absensi dalam tenant. Butuh role Admin/HRD."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Leave (Cuti/Izin/Lembur)",
+      "description": "Pengajuan cuti/izin/sakit/lembur + approval. Ajukan: semua user. Approve/reject: Admin/HRD.",
+      "item": [
+        {
+          "name": "Request Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"CUTI\",\n  \"start_date\": \"2026-08-01\",\n  \"end_date\": \"2026-08-03\",\n  \"reason\": \"Liburan keluarga\"\n}"
+            },
+            "description": "type: CUTI|IZIN|SAKIT|LEMBUR. Utk LEMBUR wajib isi \"hours\". leave_id auto-save."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res=pm.response.json();const d=res.data||res;if(d&&d.id){pm.environment.set('leave_id',d.id);console.log('leave_id: '+d.id);}",
+                  "pm.test('2xx',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Request Lembur (jam)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LEMBUR\",\n  \"start_date\": \"2026-08-10\",\n  \"end_date\": \"2026-08-10\",\n  \"reason\": \"Lembur closing bulanan\",\n  \"hours\": 3\n}"
+            },
+            "description": "Pengajuan lembur 3 jam. Dipakai payroll (jam × tarif/jam di kontrak)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r=pm.response.json();const d=r.data||r;if(d&&d.id)pm.environment.set('leave_id',d.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My Leaves",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/leaves/me?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves",
+                "me"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Riwayat pengajuan sendiri (ber-pagination)."
+          },
+          "response": []
+        },
+        {
+          "name": "All Leaves (Admin/HRD)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/leaves?status=PENDING&page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Semua pengajuan tenant. Filter opsional ?status=PENDING|APPROVED|REJECTED."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Leave (Admin/HRD)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves/{{leave_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves",
+                "{{leave_id}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Disetujui\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Leave (Admin/HRD)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves/{{leave_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves",
+                "{{leave_id}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Kuota habis\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payroll (Gaji & Kontrak)",
+      "description": "Kontrak karyawan + hitung gaji bulanan (otomatis dari absensi/lembur + BPJS + PPh21). Create/run: Admin/HRD.",
+      "item": [
+        {
+          "name": "Create Contract (HRD)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/contracts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "contracts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"type\": \"TETAP\",\n  \"base_salary\": 10000000,\n  \"standard_working_days\": 22,\n  \"ptkp_status\": \"TK/0\",\n  \"bpjs_kesehatan\": true,\n  \"bpjs_jht\": true,\n  \"bpjs_jp\": true,\n  \"start_date\": \"2026-01-01\",\n  \"terms\": \"Kontrak kerja waktu tidak tertentu. Jam kerja 09:00-17:00.\",\n  \"components\": [\n    {\n      \"kind\": \"EARNING\",\n      \"name\": \"Tunjangan Transport\",\n      \"calc\": \"FIXED\",\n      \"value\": 500000,\n      \"taxable\": true\n    },\n    {\n      \"kind\": \"DEDUCTION\",\n      \"name\": \"Potongan Koperasi\",\n      \"calc\": \"FIXED\",\n      \"value\": 100000\n    }\n  ],\n  \"overtime_rate_per_hour\": 50000\n}"
+            },
+            "description": "HRD insert kontrak + T&C + tunjangan/potongan. Butuh user_id (dari Create User)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r=pm.response.json();const d=r.data||r;if(d&&d.id)pm.environment.set('contract_id',d.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Contracts (HRD)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/contracts?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "contracts"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My Contract",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/contracts/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "contracts",
+                "me"
+              ]
+            },
+            "description": "Karyawan lihat kontraknya sendiri (T&C, bonus, potongan)."
+          },
+          "response": []
+        },
+        {
+          "name": "Contract by User (HRD)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/contracts/user/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "contracts",
+                "user",
+                "{{user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Run Payroll (HRD)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/run",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "run"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2026-08\"\n}"
+            },
+            "description": "Hitung gaji semua karyawan periode YYYY-MM. Tambah user_id utk 1 orang. Idempotent."
+          },
+          "response": []
+        },
+        {
+          "name": "Payslips by Period (HRD)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payroll?period=2026-08&page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "2026-08"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My Payslips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payroll/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "me"
+              ]
+            },
+            "description": "Slip gaji milik sendiri."
+          },
+          "response": []
         }
       ]
     }

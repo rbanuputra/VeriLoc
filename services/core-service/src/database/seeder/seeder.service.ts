@@ -18,12 +18,15 @@ export class SeederService {
 
   async run() {
     const roles = await this.seedRoles();
-    await this.seedAdmin(roles.admin);
+    await this.seedSuperAdmin(roles.SuperAdmin);
   }
 
-  /** Bikin role user/admin/hrd kalau belum ada. Idempotent. */
+  /**
+   * Seed role global. SuperAdmin = platform (lintas tenant); Admin/HRD/Staff =
+   * dipakai di dalam tiap tenant. Idempotent.
+   */
   private async seedRoles(): Promise<Record<string, Role>> {
-    const names = ['User', 'Admin', 'HRD'];
+    const names = ['SuperAdmin', 'Admin', 'HRD', 'Staff'];
     const map: Record<string, Role> = {};
 
     for (const name of names) {
@@ -39,13 +42,16 @@ export class SeederService {
     return map;
   }
 
-  /** Bikin 1 user Admin awal kalau belum ada. Idempotent. */
-  private async seedAdmin(adminRole: Role) {
+  /**
+   * Bikin 1 user SuperAdmin platform (organization_id = null) kalau belum ada.
+   * SuperAdmin mengelola tenant, bukan bagian dari tenant mana pun. Idempotent.
+   */
+  private async seedSuperAdmin(superAdminRole: Role) {
     const email = this.config.get<string>('ADMIN_EMAIL', 'admin@geoface.com');
 
     const existing = await this.userRepo.findOne({ where: { email } });
     if (existing) {
-      this.logger.log(`Admin sudah ada, dilewati: ${email}`);
+      this.logger.log(`SuperAdmin sudah ada, dilewati: ${email}`);
       return;
     }
 
@@ -54,13 +60,14 @@ export class SeederService {
 
     await this.userRepo.save(
       this.userRepo.create({
-        fullname: 'Administrator',
+        fullname: 'Super Administrator',
         email,
         password_hash,
-        role: adminRole,
+        role: superAdminRole,
+        organization_id: null,
         is_active: true,
       }),
     );
-    this.logger.log(`Admin dibuat: ${email} (password: ${password})`);
+    this.logger.log(`SuperAdmin dibuat: ${email} (password: ${password})`);
   }
 }

@@ -1,45 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { TenantId } from 'src/common/decorators/tenant-id.decorator';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import type { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 
-
+// Semua endpoint di-scope ke tenant admin yang login (organizationId).
 @Controller('user')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Admin', 'HRD')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin','HRD')
+
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  create(@CurrentUser() actor: AuthUser, @Body() createUserDto: CreateUserDto) {
+    return this.userService.create(createUserDto, actor.organizationId!);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin','HRD')
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  findAll(@TenantId() orgId: string, @Query() pagination: PaginationQueryDto) {
+    return this.userService.findAll(orgId, pagination);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin','HRD')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.findOne(id);
+  findOne(@CurrentUser() actor: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.findOne(id, actor.organizationId!);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
+  update(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.userService.update(id, updateUserDto, actor.organizationId!);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin','HRD')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.remove(id);
+  remove(@CurrentUser() actor: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.remove(id, actor.organizationId!);
   }
 }

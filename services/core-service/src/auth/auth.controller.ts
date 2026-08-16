@@ -67,6 +67,14 @@ export class AuthController {
     return this.authService.resetPassword(dto.token, dto.password);
   }
 
+  /** Tandai tur onboarding admin selesai (sekali seumur akun). */
+  @Post('complete-onboarding')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  completeOnboarding(@CurrentUser() user: AuthUser) {
+    return this.authService.completeOnboarding(user.id);
+  }
+
   /** Ganti password sendiri (mis. karyawan baru wajib ganti password sementara). */
   @Post('change-password')
   @UseGuards(JwtAuthGuard)

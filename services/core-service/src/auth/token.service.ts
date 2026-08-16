@@ -38,6 +38,7 @@ export class TokenService {
       email: user.email,
       role: user.role.name,
       organization_id: user.organization_id,
+      onboarding_completed: user.onboarding_completed,
     });
 
     const raw = randomBytes(48).toString('hex');

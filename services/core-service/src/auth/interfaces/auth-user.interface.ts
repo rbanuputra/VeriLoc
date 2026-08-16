@@ -5,4 +5,6 @@ export interface AuthUser {
   role: string;
   /** Tenant pemilik user. null untuk SuperAdmin (level platform). */
   organizationId: string | null;
+  /** Sudah menyelesaikan tur onboarding panel admin. */
+  onboardingCompleted: boolean;
 }

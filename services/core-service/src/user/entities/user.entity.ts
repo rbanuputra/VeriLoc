@@ -33,4 +33,8 @@ export class User {
     // true = akun baru (hasil onboarding) yang wajib ganti password saat login pertama.
     @Column({default: false})
     must_change_password!: boolean;
+
+    // true = user sudah menyelesaikan tur/onboarding panel admin (sekali seumur akun).
+    @Column({default: false})
+    onboarding_completed!: boolean;
 }

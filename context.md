@@ -38,6 +38,18 @@ Sistem absensi berbasis **geofencing** + **pengenalan wajah (Face Recognition)**
 - `postman/` — koleksi & environment
 - `docker-compose.yml` — orkestrasi lokal
 
+## Frontend — Admin Dashboard (`apps/admin`)
+Panel internal (Admin/HRD/Manager/SuperAdmin — **bukan Staff**). Stack: **Next.js 14 App Router + TypeScript + Tailwind + shadcn/ui** (komponen di `components/ui/`). Jalan di port **3002**, consume core-service `:3001` (`NEXT_PUBLIC_API_URL`).
+- **Auth**: `lib/api.ts` (fetch + auto-refresh 401 + retry, token di localStorage), `lib/auth.tsx` (AuthProvider + `useAuth`, decode JWT, role-gating `ADMIN_ROLES` blokir Staff).
+- **Layout**: `app/(dashboard)/layout.tsx` (sidebar `components/sidebar.tsx` + topbar + guard), login `app/login/page.tsx`.
+- **Role-aware**: SuperAdmin (tim GeoFace) → Platform Console (Perusahaan, Super Admin); Admin/HRD → Admin Panel (HR). Sidebar/dashboard nyesuain role.
+- **Halaman platform** (SuperAdmin): Dashboard (stat perusahaan+superadmin), Perusahaan (`/organizations` list), Super Admin (`/super-admins` list + create).
+- **Halaman tenant** (Admin/HRD): Dashboard (stat), Karyawan (`/employees`), Absensi (`/attendance` list), Cuti & Lembur (`/leaves` list + approve/reject), Payroll (`/payroll` run + slip gaji), Onboarding (`/onboarding` upload kontrak → review draft → confirm buat akun), Kantor (`/offices` list + create).
+- **LocationPicker** (`components/location-picker.tsx`): peta **Leaflet + OpenStreetMap** (gratis, tanpa API key) buat set lokasi kantor — klik/geser pin, **search alamat** (Nominatim), tombol **"Lokasi saya"** (geolocation), lingkaran radius live. Dipakai di halaman Kantor (ganti input lat/lng manual; radius jadi slider). Dep: `leaflet`.
+- UI primitives: Button, Card, Input, Label, Table, Badge, Select, Textarea (`components/ui/`).
+- **Product tour** (`components/onboarding-tour.tsx`): modal step-by-step, OTOMATIS muncul **sekali seumur akun** (flag backend `users.onboarding_completed`, dibawa di JWT, di-persist via `POST /auth/complete-onboarding` lalu refresh token). Role-aware (langkah tenant vs platform), jelasin setup + tiap menu. Tombol **?** di topbar buka ulang. `AuthUser.onboardingCompleted` di JWT payload (BE & FE).
+- Jalanin: `cd apps/admin && npm install && npm run dev` → http://localhost:3002. Build hijau (12 route).
+
 ## Arsitektur Multi-Tenant (SaaS)
 Aplikasi ini **SaaS multi-tenant**: satu instance dipakai banyak perusahaan (tenant). Model isolasi: **shared DB + kolom `organization_id`** di semua tabel tenant. Semua query WAJIB di-scope `organization_id` (diambil dari JWT, bukan body).
 - **Organization** = tenant (perusahaan pelanggan). Entity root.
@@ -86,7 +98,7 @@ Aplikasi ini **SaaS multi-tenant**: satu instance dipakai banyak perusahaan (ten
   - Test: `payroll-calculator.service.spec` (4 passed).
 - ✅ **Onboarding berbasis dokumen** (`onboarding/`) — HRD upload kontrak → OCR → parse draft → review → confirm → buat akun + kontrak:
   - ai-service `POST /ocr` (PyMuPDF ekstrak teks PDF digital, fallback Tesseract `ind+eng` utk scan/gambar). `AiService.ocr()`.
-  - `ContractParserService` (regex istilah gaji ID: gaji pokok, tunjangan, potongan, lembur/jam) → draft `{base_salary, overtime_rate_per_hour, components[], terms, notes[]}`. **Selalu di-review HRD (OCR tak 100% akurat).**
+  - `ContractParserService` → draft `{base_salary, overtime_rate_per_hour, ptkp_status, standard_working_days, components[], terms, notes[]}`. **Parser cerdas TANPA template** (semua lokal/gratis): normalisasi teks + perbaikan galat OCR, **fuzzy match label** (Levenshtein, tahan typo mis. "Pokk"→"Pokok"), ekstraksi nilai fleksibel (pemisah `:`/`=`/spasi/baris berikutnya), parser Rupiah toleran (`Rp8.000.000`, `IDR 8,000,000`, `[8.000.000]`), deteksi tunjangan/potongan generik (nama apa pun). Test 6/6. **Selalu di-review HRD.** (Ide template ditinggalkan atas permintaan user.)
   - Entity `ContractDocument` (file MinIO + raw_text + extracted_data JSONB + status SCANNED→CONFIRMED + link user/contract).
   - Endpoint: `POST /onboarding/contracts/upload` (multipart file+fullname+email+role_id), `GET /onboarding/contracts[/:id]`, `POST /onboarding/contracts/:id/confirm`.
   - Confirm → `UserService.createEmployee` (password SEMENTARA, `must_change_password=true`, temp_password di-return sekali) + `ContractService.create`.

@@ -102,6 +102,12 @@ export class AuthService {
     return { success: true };
   }
 
+  /** Tandai tur onboarding admin selesai (sekali seumur akun). */
+  async completeOnboarding(userId: string) {
+    await this.userService.completeOnboarding(userId);
+    return { onboarding_completed: true };
+  }
+
   /**
    * Self-service signup tenant. Membuat Organization + user Admin pertamanya
    * secara atomik (transaksi). Mengembalikan token siap pakai.

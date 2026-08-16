@@ -139,6 +139,14 @@ export class UserService {
     }
   }
 
+  /** Tandai user sudah menyelesaikan tur onboarding (sekali seumur akun). */
+  async completeOnboarding(userId: string): Promise<void> {
+    await this.userRepository.update(
+      { id: userId },
+      { onboarding_completed: true },
+    );
+  }
+
   /** Ambil user + password_hash (untuk verifikasi ganti password). */
   findByIdWithPassword(id: string) {
     return this.userRepository.findOne({
@@ -242,6 +250,7 @@ export class UserService {
         fullname: true,
         password_hash: true,
         organization_id: true,
+        onboarding_completed: true,
         role: {
           id: true,
           name: true

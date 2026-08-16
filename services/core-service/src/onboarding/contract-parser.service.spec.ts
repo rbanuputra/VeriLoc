@@ -1,39 +1,53 @@
 import { ContractParserService } from './contract-parser.service';
 import { ComponentKind } from '../payroll/entities/contract-component.entity';
 
-describe('ContractParserService', () => {
+describe('ContractParserService (tanpa template)', () => {
   const parser = new ContractParserService();
 
-  const sample = `
-    PERJANJIAN KERJA
-    Gaji Pokok: Rp 8.500.000 per bulan
-    Tunjangan Transport Rp 500.000
-    Tunjangan Makan: Rp 750.000
-    Potongan Koperasi Rp 100.000
-    Upah lembur per jam sebesar Rp 50.000
-    Syarat dan ketentuan: jam kerja 09.00-17.00.
+  // Kontrak bebas & "berantakan": pemisah campur (:, =, tanpa pemisah),
+  // format Rp beragam, dan ada salah ketik OCR ("Pokk").
+  const messy = `
+    SURAT PERJANJIAN KERJA
+    Gaji Pokk   Rp 8.500.000,-
+    Tunjangan Transport : Rp500.000
+    Tunjangan Makan   Rp 750.000
+    Potongan Koperasi = Rp 100.000
+    Tarif Lembur per Jam  Rp 50.000
+    Status PTKP K/1
+    Hari kerja per bulan 22 hari
   `;
 
-  it('mengekstrak gaji pokok', () => {
-    expect(parser.parse(sample).base_salary).toBe(8_500_000);
+  it('gaji pokok terbaca walau salah ketik & tanpa pemisah', () => {
+    expect(parser.parse(messy).base_salary).toBe(8_500_000);
   });
 
-  it('mengekstrak tarif lembur per jam', () => {
-    expect(parser.parse(sample).overtime_rate_per_hour).toBe(50_000);
+  it('tarif lembur per jam terbaca', () => {
+    expect(parser.parse(messy).overtime_rate_per_hour).toBe(50_000);
   });
 
-  it('mengekstrak tunjangan (EARNING) dan potongan (DEDUCTION)', () => {
-    const r = parser.parse(sample);
-    const earnings = r.components.filter((c) => c.kind === ComponentKind.EARNING);
-    const deductions = r.components.filter(
-      (c) => c.kind === ComponentKind.DEDUCTION,
+  it('PTKP & hari kerja terbaca', () => {
+    const r = parser.parse(messy);
+    expect(r.ptkp_status).toBe('K/1');
+    expect(r.standard_working_days).toBe(22);
+  });
+
+  it('deteksi tunjangan (earning) & potongan (deduction) otomatis', () => {
+    const r = parser.parse(messy);
+    const earn = r.components.filter((c) => c.kind === ComponentKind.EARNING);
+    const deduct = r.components.filter((c) => c.kind === ComponentKind.DEDUCTION);
+    expect(earn.map((c) => c.value)).toEqual(
+      expect.arrayContaining([500_000, 750_000]),
     );
-    expect(earnings.length).toBeGreaterThanOrEqual(2);
-    expect(deductions.some((d) => d.value === 100_000)).toBe(true);
+    expect(deduct.some((d) => d.value === 100_000)).toBe(true);
   });
 
-  it('memberi catatan bila gaji pokok tidak terbaca', () => {
-    const r = parser.parse('Dokumen tanpa angka gaji.');
+  it('nilai bertanda kurung [ ] tetap terbaca (kompatibel)', () => {
+    const r = parser.parse('Gaji Pokok : Rp [9.250.000]');
+    expect(r.base_salary).toBe(9_250_000);
+  });
+
+  it('memberi catatan bila gaji pokok tidak ada', () => {
+    const r = parser.parse('Dokumen tanpa nominal gaji.');
     expect(r.base_salary).toBeNull();
     expect(r.notes.length).toBeGreaterThan(0);
   });
